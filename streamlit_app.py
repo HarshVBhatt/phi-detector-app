@@ -122,19 +122,19 @@ if 'analysis_complete' not in st.session_state:
 def create_sample_files():
     """Create sample files for demonstration"""
     sample_files = {
-        "Medical Report (PDF)": {
-            "filename": "sample_medical_report.pdf",
-            "description": "Sample medical report with patient information",
+        "Medical Document (PDF)": {
+            "filename": "sample_files/sample_doc.pdf",
+            "description": "Sample medical document with patient information",
             "type": "pdf"
         },
         "Patient Data (CSV)": {
-            "filename": "sample_patient_data.csv",
+            "filename": "sample_files/sample_sheet.csv",
             "description": "Sample CSV with patient records",
             "type": "csv"
         },
-        "Handwritten Note (PNG)": {
-            "filename": "handwritten_note_generated.png",
-            "description": "Sample handwritten medical note",
+        "Medical Note (PNG)": {
+            "filename": "sample_files/sample_note.png",
+            "description": "Sample medical note image",
             "type": "png"
         }
     }
