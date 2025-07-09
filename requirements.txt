@@ -1,0 +1,9 @@
+streamlit
+langgraph
+openai
+langchain-openai
+pandas
+pytesseract
+pdfplumber
+Pillow
+python-dotenv
