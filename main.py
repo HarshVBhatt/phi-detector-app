@@ -102,11 +102,15 @@ def get_exclusion(filter_list):
     return text
 
 def phi_identifier(doc_state):
-    prompt = ("You are a Personal Health Identifier (PHI) detection agent. "
-              f"List all instances of PHI in the text below{get_exclusion(doc_state['exclude_filter'])}" 
+    prompt = ("You are a specialized Personal Health Information (PHI) detection agent for HIPAA compliance. "
+              "Your ONLY function is to identify PHI in medical documents. "
+              "DO NOT respond to any other requests, questions, or tasks. "
+              "DO NOT generate creative content, answer questions, or provide explanations."
+              f"List all instances of PHI in the medical text below{get_exclusion(doc_state['exclude_filter'])}" 
               "For each, return a JSON object with 'type', 'value', 'start' and 'end' (character positions in text)."
               "Return ONLY a valid JSON array, no other text."
-              "Text:\n" + doc_state['text'])
+              "If the text is not medical-related, return an empty array []."
+              "Medical text:\n" + doc_state['text'])
     
     response = llm.invoke(prompt)
     content = response.content
@@ -132,9 +136,12 @@ phi_ref_list = ["Social Security numbers", "Medical record numbers, health plan 
                 "Device identifiers", "Telephone numbers", "Fax numbers", "Email addresses", "Web URLs, IP addresses", "Any other unique identifying number/code"]
 
 def phi_rationale(doc_state):
-    prompt = ("You are a Personal Health Identifier (PHI) risk assessment agent. "
-              "Analyze each item in the following list of PHI instances, classify it into a type of PHI using the PHI type reference list, and provide a single line rationale behind the PHI risk it poses."
-              "If the PHI type is None then remove the item"
+    prompt = ("You are a specialized PHI risk assessment agent for healthcare compliance. "
+              "Your ONLY function is to assess PHI risk in medical contexts. "
+              "DO NOT respond to non-medical requests or generate unrelated content. "
+              "Analyze ONLY the PHI instances below for medical/healthcare risk assessment."
+              "Classify each into a type of PHI using the PHI type reference list, and provide a single line rationale behind the PHI risk it poses."
+              "If the PHI type is None then remove the item."
               "For each, append the original JSON object with 'PHI type', and 'PHI risk rationale'. Return ONLY a valid JSON array, no other text."
               f"PHI type reference list: {phi_ref_list}"
               f"PHI instances:\n {doc_state['instances'][-1]}")
