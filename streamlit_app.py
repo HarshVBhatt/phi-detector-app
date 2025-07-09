@@ -162,26 +162,69 @@ def get_file_preview(file_path, file_type):
     return None
 
 def highlight_phi_instances(text, phi_instances):
-    """Highlight PHI instances in the text"""
+    """Highlight PHI instances in the text by finding values in the original text"""
     if not phi_instances or not isinstance(phi_instances, list):
         return text
     
-    # Sort instances by start position in descending order to avoid index shifting
-    sorted_instances = sorted(phi_instances, key=lambda x: x.get('start', 0), reverse=True)
-    
     highlighted_text = text
-    for instance in sorted_instances:
-        if all(key in instance for key in ['start', 'end', 'value']):
-            start = instance['start']
-            end = instance['end']
-            value = instance['value']
-            phi_type = instance.get('type', 'Unknown')
+    
+    # Keep track of offset due to HTML insertions
+    offset = 0
+    
+    # Process instances and find their positions in the text
+    instances_with_positions = []
+    
+    for instance in phi_instances:
+        if 'value' in instance and instance['value']:
+            value = str(instance['value']).strip()
+            phi_type = instance.get('PHI type', instance.get('type', 'Unknown'))
             
-            # Create highlighted span
-            highlighted_value = f'<span class="phi-highlight" title="PHI Type: {phi_type}">{value}</span>'
-            
-            # Replace in text
-            highlighted_text = highlighted_text[:start] + highlighted_value + highlighted_text[end:]
+            # Find all occurrences of this value in the text
+            search_start = 0
+            while True:
+                pos = text.find(value, search_start)
+                if pos == -1:
+                    break
+                
+                # Check if this position is already covered by another instance
+                overlapping = False
+                for existing in instances_with_positions:
+                    if not (pos >= existing['end'] or pos + len(value) <= existing['start']):
+                        overlapping = True
+                        break
+                
+                if not overlapping:
+                    instances_with_positions.append({
+                        'start': pos,
+                        'end': pos + len(value),
+                        'value': value,
+                        'phi_type': phi_type,
+                        'original_instance': instance
+                    })
+                    break  # Only highlight first occurrence to avoid duplicates
+                
+                search_start = pos + 1
+    
+    # Sort by start position in descending order to avoid index shifting during replacement
+    instances_with_positions.sort(key=lambda x: x['start'], reverse=True)
+    
+    # Apply highlighting
+    for instance in instances_with_positions:
+        start = instance['start']
+        end = instance['end']
+        value = instance['value']
+        phi_type = instance['phi_type']
+        
+        # Create tooltip with additional information
+        tooltip_info = f"PHI Type: {phi_type}"
+        if 'PHI risk rationale' in instance['original_instance']:
+            tooltip_info += f"&#10;Risk: {instance['original_instance']['PHI risk rationale']}"
+        
+        # Create highlighted span with tooltip
+        highlighted_value = f'<span class="phi-highlight" title="{tooltip_info}">{value}</span>'
+        
+        # Replace in text
+        highlighted_text = highlighted_text[:start] + highlighted_value + highlighted_text[end:]
     
     return highlighted_text
 
