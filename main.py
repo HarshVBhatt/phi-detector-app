@@ -3,23 +3,31 @@ import io
 import json
 from langgraph.graph import StateGraph, START, END, MessagesState
 import pandas as pd
-from IPython.display import Image, display
 from PIL import Image as pil_image
 import pytesseract
 import pdfplumber
 from dataclasses import dataclass
 from typing import Literal
 from langchain_openai import ChatOpenAI
-import streamlit_app as st
 
-# API Key config
-openai_api_key = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
-langsmith_api_key = st.secrets.get("LANGSMITH_API_KEY") or os.getenv("LANGSMITH_API_KEY")
+# API Key configuration - handle both Streamlit and direct execution
+try:
+    import streamlit as st
+    # If running in Streamlit, use secrets
+    openai_api_key = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
+    langsmith_api_key = st.secrets.get("LANGSMITH_API_KEY") or os.getenv("LANGSMITH_API_KEY")
+except:
+    # If not running in Streamlit, use environment variables
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+    langsmith_api_key = os.getenv("LANGSMITH_API_KEY")
 
 if openai_api_key:
     os.environ["OPENAI_API_KEY"] = openai_api_key
 if langsmith_api_key:
     os.environ["LANGSMITH_API_KEY"] = langsmith_api_key
+    os.environ["LANGSMITH_TRACING"] = "true"
+    os.environ["LANGSMITH_PROJECT"] = "phi-detector"
+    os.environ["LANGSMITH_ENDPOINT"] = "https://api.smith.langchain.com"
 
 # Input class
 @dataclass
@@ -47,7 +55,7 @@ def input_router(doc_state) -> Literal["OCR", "PDF Parser", "CSV Parser"]:
     elif file_ext == "csv":
         return "CSV Parser"
     else:
-        raise "Invalid file type"
+        raise ValueError("Invalid file type")
     
 # OCR Tool
 def ocr_tool(doc_state):
@@ -78,14 +86,14 @@ def csv_parser_tool(doc_state):
     doc_state["text"] = text
     return doc_state
 
-# Initalize LLM
+# Initialize LLM
 llm = ChatOpenAI(model = "gpt-4o")
 
 # PHI Identifier
 def get_exclusion(filter_list):
-    text = "."
+    text = ""
     if filter_list:
-        text += "except PHI instances of the type"
+        text += " except PHI instances of the type"
         for item in filter_list[:-1]:
             text += f" {item},"
         if len(filter_list) > 1:
@@ -150,7 +158,6 @@ def phi_rationale(doc_state):
     return doc_state
 
 # Helper Functions
-## Clean JSON string
 def extract_dict(text: str):
     lines = text.splitlines()
     instances_dict = "".join(lines[1:-1]).replace("\'", "\"")
@@ -175,10 +182,10 @@ graph.add_edge("PHI Rationale", END)
 
 flow_graph = graph.compile()
 
-# Run
-def run_flow(file_path = "sample_files/sample_note.png", exclude_filter = []):
-    file_bytes, file_ext = get_file_data(file_path = file_path)
-    doc_state = docState(input = file_bytes, file_ext = file_ext, text = "", instances = [], exclude_filter = exclude_filter)
+# Run function - returns both text and instances
+def run_flow(file_path="sample_files/sample_note.png", exclude_filter=[]):
+    file_bytes, file_ext = get_file_data(file_path=file_path)
+    doc_state = docState(input=file_bytes, file_ext=file_ext, text="", instances=[], exclude_filter=exclude_filter)
     result = flow_graph.invoke(doc_state)
     phi_instances = result["instances"][-1]
     orig_text = result["text"]
@@ -187,5 +194,6 @@ def run_flow(file_path = "sample_files/sample_note.png", exclude_filter = []):
         try:
             phi_instances = extract_dict(phi_instances)
         except:
-            pass
+            phi_instances = []
+    
     return orig_text, phi_instances

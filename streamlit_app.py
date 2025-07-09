@@ -7,8 +7,12 @@ import base64
 from PIL import Image
 import pandas as pd
 
-# Import your main functions (assuming they're in main.py)
-from main import run_flow
+# Import your main functions
+try:
+    from main import run_flow, get_file_data, docState, ocr_tool, pdf_parser_tool, csv_parser_tool
+except ImportError as e:
+    st.error(f"Import error: {e}")
+    st.stop()
 
 # Page configuration
 st.set_page_config(
@@ -301,29 +305,13 @@ def main():
                         file_path = st.session_state.selected_file
                     
                     # Run PHI detection
-                    phi_instances = run_flow(
+                    original_text, phi_instances = run_flow(
                         file_path=file_path,
                         exclude_filter=exclude_filter
                     )
                     
-                    # Get the original text for highlighting
-                    from main import get_file_data, docState, flow_graph
-                    file_bytes, file_ext = get_file_data(file_path)
-                    doc_state = docState(input=file_bytes, file_ext=file_ext, text="", instances=[], exclude_filter=exclude_filter)
-                    
-                    # Get just the text extraction part
-                    if file_ext == "png":
-                        from main import ocr_tool
-                        doc_state = ocr_tool(doc_state)
-                    elif file_ext == "pdf":
-                        from main import pdf_parser_tool
-                        doc_state = pdf_parser_tool(doc_state)
-                    elif file_ext == "csv":
-                        from main import csv_parser_tool
-                        doc_state = csv_parser_tool(doc_state)
-                    
                     st.session_state.phi_results = phi_instances
-                    st.session_state.original_text = doc_state["text"]
+                    st.session_state.original_text = original_text
                     st.session_state.analysis_complete = True
                     
                     # Clean up temporary file
