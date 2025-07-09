@@ -256,7 +256,7 @@ def display_phi_statistics(phi_instances):
 # Main App
 def main():
     st.markdown('<h1 class="main-header">🔍 PHI Detection System</h1>', unsafe_allow_html=True)
-    st.markdown("**Detect Personal Health Information in documents using advanced AI**")
+    st.markdown("**Detect Personal Health Information in documents using LLMs**")
     
     # Sidebar for exclusion filters
     with st.sidebar:
@@ -271,7 +271,7 @@ def main():
             "Geographic subdivisions < state"
         ]
         exclude_filter = st.multiselect(
-            "Exclude PHI types from detection:",
+            "Exclude PHI types:",
             exclude_options,
             help="Select PHI types to exclude from detection"
         )
